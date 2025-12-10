@@ -1,27 +1,34 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
-  private client: OpenAI;
+  private model: any;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new BadRequestException(
-        'OPENAI_API_KEY 환경변수가 설정되지 않았습니다.',
+        'GEMINI_API_KEY 환경변수가 설정되지 않았습니다.',
       );
     }
-    this.client = new OpenAI({ apiKey });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    this.model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
   }
 
-  // 간단한 재시도 로직
+  private async delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // 공통 재시도 처리
   private async callWithRetry<T>(
     apiCall: () => Promise<T>,
     operationName: string,
     maxRetries = 2,
-  ): Promise<T> {
+  ): Promise<any> {
     let lastError: any;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -30,105 +37,73 @@ export class LlmService {
       } catch (error: any) {
         lastError = error;
 
-        // 쿼터 초과 에러를 먼저 확인
-        const errorCode = error?.code || error?.error?.code;
-        if (errorCode === 'insufficient_quota') {
-          this.logger.error(`${operationName} 쿼터 초과`);
-          throw new BadRequestException(
-            'OpenAI API 쿼터가 초과되었습니다. 계정 설정을 확인해주세요.',
-          );
-        }
-
-        // Rate Limit 에러인 경우
-        if (error?.status === 429 && errorCode !== 'insufficient_quota') {
-          const waitTime = attempt * 2000; // 2초, 4초
+        // Rate Limit 또는 서버 오류
+        if (error?.status === 429 || error?.status >= 500) {
+          const wait = attempt * 2000;
           this.logger.warn(
-            `${operationName} Rate Limit 도달. ${waitTime}ms 후 재시도 (${attempt}/${maxRetries})`,
+            `${operationName} 재시도중 (${attempt}/${maxRetries}) – ${wait}ms 대기`,
           );
-
-          if (attempt < maxRetries) {
-            await this.delay(waitTime);
-            continue;
-          }
+          await this.delay(wait);
+          continue;
         }
 
-        // 마지막 시도 실패 시
-        if (attempt === maxRetries) {
-          this.logger.error(
-            `${operationName} 실패 (${attempt}회 시도):`,
-            error?.message || error?.error?.message || error,
-          );
-          throw error;
-        }
-
-        // 다른 에러는 짧은 대기 후 재시도
-        await this.delay(1000 * attempt);
+        // 기타 오류 → 즉시 종료
+        this.logger.error(`${operationName} 에러:`, error?.message || error);
+        throw error;
       }
     }
 
-    throw lastError;
+    this.logger.error(`${operationName} 실패`, lastError);
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
+  // Gemini 요약
   async summarize(title: string, content: string): Promise<string> {
     const prompt = `
-    다음 경제 뉴스를 3~4문장으로 요약해줘. 핵심 내용만 간결하게.
-    제목: ${title}
-    내용: ${content}
+다음 경제 뉴스를 3~4문장으로 간결하게 요약해줘.
+제목: ${title}
+내용: ${content}
     `;
 
     return this.callWithRetry(async () => {
-      const res = await this.client.chat.completions.create({
-        model: 'gpt-5-nano',
-        messages: [
-          {
-            role: 'system',
-            content:
-              '너는 경제 전문 기자야. 뉴스를 간결하고 명확하게 요약해줘.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        max_tokens: 200,
-        temperature: 0.3,
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 200,
+        },
       });
 
-      return res.choices[0].message?.content?.trim() ?? '';
+      const response = await result.response;
+      return response.text().trim();
     }, '요약');
   }
 
+  // Gemini 인사이트 생성
   async generateInsights(
     newsList: Array<{ title: string; description: string }>,
   ): Promise<string> {
     const newsText = newsList
-      .map((news, idx) => `${idx + 1}. ${news.title}: ${news.description}`)
+      .map((n, i) => `${i + 1}. ${n.title}: ${n.description}`)
       .join('\n\n');
 
     const prompt = `
-    다음 경제 뉴스들을 종합적으로 분석해서 최근 경제 트렌드와 인사이트를 3~4문장으로 요약해줘.
-    
-    뉴스 목록:
-    ${newsText}
+다음 여러 경제 뉴스를 기반으로 최근 경제 흐름과 핵심 인사이트를 3~4문장으로 분석해줘.
+
+뉴스 목록:
+${newsText}
     `;
 
     return this.callWithRetry(async () => {
-      const res = await this.client.chat.completions.create({
-        model: 'gpt-5-nano',
-        messages: [
-          {
-            role: 'system',
-            content:
-              '너는 경제 분석 전문가야. 여러 뉴스를 종합해서 트렌드와 인사이트를 도출해줘.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        max_tokens: 300,
-        temperature: 0.5,
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 300,
+        },
       });
 
-      return res.choices[0].message?.content?.trim() ?? '';
+      const response = await result.response;
+      return response.text().trim();
     }, '인사이트 생성');
   }
 }
