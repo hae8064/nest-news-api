@@ -4,9 +4,9 @@ import { NewsController } from './news.controller';
 import { LlmModule } from 'src/llm/llm.module';
 
 @Module({
-  imports: [LlmModule],
-  controllers: [NewsController],
-  providers: [NewsService],
-  exports: [NewsService],
+	imports: [LlmModule],
+	controllers: [NewsController],
+	providers: [NewsService],
+	exports: [NewsService],
 })
 export class NewsModule {}
