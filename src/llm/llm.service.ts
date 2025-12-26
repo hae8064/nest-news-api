@@ -62,10 +62,15 @@ export class LlmService {
 	}
 
 	// Gemini 요약
-	async summarize(title: string, content: string): Promise<string> {
+	async summarize(
+		title: string,
+		content: string,
+		pubDate: string,
+	): Promise<string> {
 		const prompt = `
 다음 경제 뉴스를 3~4문장으로 간결하게 요약해줘.
 제목: ${title}
+기사날짜: ${pubDate}
 내용: ${content}
     `;
 
