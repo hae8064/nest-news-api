@@ -8,4 +8,5 @@ export interface NewsItem {
 	pubDate: string;
 	description?: string;
 	content?: string;
+	summary?: string;
 }

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { formatKoreanDate } from 'src/common/utils/date.util';
 import { NewsItem } from './types/news.types';
 import { CrawlerService } from 'src/crawler/crawler.service';
+import { LlmService } from 'src/llm/llm.service';
 
 @Injectable()
 export class NewsService {
@@ -15,6 +16,7 @@ export class NewsService {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly crawlerService: CrawlerService,
+		private readonly llmService: LlmService,
 	) {
 		// 생성자에서 환경변수 한 번만 읽기
 		this.clientId = this.configService.get<string>('NAVER_CLIENT_ID') || '';
@@ -47,11 +49,33 @@ export class NewsService {
 					(await this.crawlerService.fetchArticleContent(item.originallink)) ||
 					item.description?.replace(/<[^>]*>?/gm, '');
 
+				const formattedDate = formatKoreanDate(item.pubDate);
+				const title = item.title.replace(/<[^>]*>?/gm, '');
+
+				// LLM으로 요약 생성
+				let summary = '';
+				try {
+					if (content && content.length > 100) {
+						summary = await this.llmService.summarize(
+							title,
+							content,
+							formattedDate,
+						);
+					} else {
+						this.logger.warn(
+							`요약 건너뜀: ${title} - 본문이 너무 짧음 (${content?.length || 0}자)`,
+						);
+					}
+				} catch (error) {
+					this.logger.error(`요약 실패: ${title}`, error);
+					summary = '요약 생성 실패';
+				}
+
 				return {
-					title: item.title.replace(/<[^>]*>?/gm, ''),
+					title,
 					originallink: item.originallink,
-					pubDate: formatKoreanDate(item.pubDate),
-					content: content || '',
+					pubDate: formattedDate,
+					summary: summary || '요약 없음',
 				};
 			}),
 		);
