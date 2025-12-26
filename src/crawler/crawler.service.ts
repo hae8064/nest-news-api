@@ -158,6 +158,64 @@ export class CrawlerService {
 				content = content.split('관련 뉴스')[0].trim();
 				content = content.split('제보는 카카오톡')[0].trim();
 				usedSelector = 'yna.co.kr specific';
+			} else if (domain.includes('kbs.co.kr')) {
+				// KBS 뉴스
+				const selectors = [
+					'.article-body',
+					'#article-body',
+					'.article-body-contents',
+					'.news-cont',
+					'.article_view',
+					'[class*="article"]',
+					'[id*="article"]',
+				];
+
+				for (const selector of selectors) {
+					const found = $(selector).first().text().trim();
+					if (found && found.length > 100) {
+						content = found;
+						usedSelector = `kbs.co.kr: ${selector}`;
+						break;
+					}
+				}
+			} else if (domain.includes('hbnpress.com')) {
+				// HBN 프레스
+				const selectors = [
+					'.article-content',
+					'#article-content',
+					'.news-content',
+					'.article-body',
+					'[class*="content"]',
+					'[id*="content"]',
+				];
+
+				for (const selector of selectors) {
+					const found = $(selector).first().text().trim();
+					if (found && found.length > 100) {
+						content = found;
+						usedSelector = `hbnpress.com: ${selector}`;
+						break;
+					}
+				}
+			} else if (domain.includes('geconomy.co.kr')) {
+				// 지이코노미
+				const selectors = [
+					'.article-body',
+					'#article-body',
+					'.article-content',
+					'.news-body',
+					'[class*="article"]',
+					'[id*="article"]',
+				];
+
+				for (const selector of selectors) {
+					const found = $(selector).first().text().trim();
+					if (found && found.length > 100) {
+						content = found;
+						usedSelector = `geconomy.co.kr: ${selector}`;
+						break;
+					}
+				}
 			}
 
 			// 도메인별 처리로 찾지 못한 경우, 일반 선택자 시도
@@ -216,13 +274,6 @@ export class CrawlerService {
 					content = articleContent;
 					usedSelector = 'fallback: article/main';
 				}
-			}
-
-			// 디버깅 로그 추가
-			if (content && content.length > 0) {
-				this.logger.debug(
-					`크롤링 성공: ${url} | 선택자: ${usedSelector} | 길이: ${content.length}`,
-				);
 			}
 
 			if (content && content.length > 100) {
