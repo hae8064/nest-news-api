@@ -1,98 +1,59 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## 📰 Daily Economy News Digest
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+<img width="645" height="728" alt="image" src="https://github.com/user-attachments/assets/f820cd07-958c-42db-8a35-521f5560ad8f" />
+<br/>
+네이버 뉴스 API와 LLM(Google Gemini)을 활용하여
+경제·부동산 뉴스를 자동으로 수집 → 요약 → 매일 아침 이메일로 전달하는 서비스입니다.
 
-## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+### 서비스 소개
 
-```bash
-$ pnpm install
-```
+이 프로젝트는 매일 쏟아지는 경제·부동산 뉴스를 효율적으로 소비하기 위해 만들어졌습니다.
 
-## Compile and run the project
+네이버 뉴스 API를 통해 최신 뉴스를 수집하고 기사 원문을 직접 크롤링한 뒤
 
-```bash
-# development
-$ pnpm run start
+LLM(Gemini)을 활용해 핵심 내용만 요약 매일 오전 7시, 구독한 이메일로 자동 발송합니다.
 
-# watch mode
-$ pnpm run start:dev
+운영 환경에서도 바로 사용할 수 있도록 Docker + Cron 기반의 완전 자동화 구조로 설계되었습니다.
 
-# production mode
-$ pnpm run start:prod
-```
+### 동작 방식
 
-## Run tests
+1. 뉴스 수집
+- Naver Developers News API 사용
+- 경제 / 부동산 카테고리
+- 각 카테고리 10개씩, 총 20개 기사 수집
 
-```bash
-# unit tests
-$ pnpm run test
+2. 기사 본문 크롤링
+- 뉴스 API에서 받은 기사 링크를 기반으로
+- 실제 기사 본문 HTML 크롤링
 
-# e2e tests
-$ pnpm run test:e2e
+3. LLM 요약
+- 크롤링한 기사 본문을 Gemini API에 전달
+- 핵심 위주의 요약 문장 생성
 
-# test coverage
-$ pnpm run test:cov
-```
+4. 이메일 발송
+- 요약된 뉴스 데이터를 HTML 메일 템플릿으로 구성
+- 구독자 이메일로 발송
 
-## Deployment
+5. 자동 실행
+- crontab을 통해 매일 오전 7시 자동 실행
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 기술 스택
+Backend
+- NestJS
+- TypeScript
+- TypeORM
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+External APIs
+- Naver Developers News API
+- Google Gemini API
 
-```bash
-$ pnpm install -g mau
-$ mau deploy
-```
+Database
+- PostgreSQL 15
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Infrastructure
+- Docker / Docker Compose
+- AWS EC2
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
