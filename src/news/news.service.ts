@@ -38,7 +38,7 @@ export class NewsService {
 			},
 			params: {
 				query,
-				display: 5,
+				display: 10,
 				sort: 'date',
 			},
 		});
@@ -75,6 +75,7 @@ export class NewsService {
 					title,
 					originallink: item.originallink,
 					pubDate: formattedDate,
+					content: '',
 					summary: summary || '요약 없음',
 				};
 			}),
