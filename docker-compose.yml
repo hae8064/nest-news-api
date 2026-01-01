@@ -3,14 +3,38 @@ services:
     image: postgres:15-alpine
     container_name: nest-news-postgres
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - ${DB_PORT}:5432
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-nest_news}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /mnt/postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-volumes:
-  postgres_data:
+  api:
+    build:
+      context: .
+    container_name: nest-news-api
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      TZ: Asia/Seoul
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8008:8008"
+    networks:
+      - app-net
+
+networks:
+  app-net:

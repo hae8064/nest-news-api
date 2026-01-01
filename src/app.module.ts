@@ -15,7 +15,7 @@ import { CrawlerModule } from './crawler/crawler.module';
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
-			envFilePath: ['.env', '.env.dev'],
+			envFilePath: ['.env', '.env.dev', '.env.prod'],
 		}),
 		TypeOrmModule.forRootAsync({
 			imports: [ConfigModule],
