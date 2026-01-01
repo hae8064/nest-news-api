@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+	ConflictException,
+	Injectable,
+	Logger,
+	NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subscription } from './subscription.entity';
@@ -19,7 +24,7 @@ export class SubscriptionService {
 
 		if (existing) {
 			if (existing.isActive) {
-				throw new Error('이미 구독 중인 이메일입니다.');
+				throw new ConflictException('이미 구독 중인 이메일입니다.');
 			}
 			existing.isActive = true;
 			return this.subscriptionRepository.save(existing);
