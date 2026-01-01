@@ -39,7 +39,7 @@ export class NewsService {
 			params: {
 				query,
 				display: 10,
-				sort: 'date',
+				sort: 'sim',
 			},
 		});
 
