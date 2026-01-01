@@ -2,5 +2,14 @@
 	"singleQuote": true,
 	"trailingComma": "all",
 	"useTabs": true,
-	"tabWidth": 2
+	"tabWidth": 2,
+	"overrides": [
+		{
+			"files": "*.yml",
+			"options": {
+				"useTabs": false,
+				"tabWidth": 2
+			}
+		}
+	]
 }
