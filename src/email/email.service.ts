@@ -56,7 +56,7 @@ export class EmailService {
 <body>
 	<div class="container">
 		<div class="header">
-			<h1>📰 오늘의 경제 뉴스</h1>
+			<h1>📰 오늘의 뉴스요약</h1>
 			<p>${today}</p>
 		</div>
 
@@ -116,7 +116,7 @@ export class EmailService {
 			await this.transporter.sendMail({
 				from: this.configService.get<string>('SMTP_FROM'),
 				to,
-				subject: `📰 오늘의 경제 뉴스 - ${new Date().toLocaleDateString('ko-KR')}`,
+				subject: `📰 오늘의 뉴스 요약 - ${new Date().toLocaleDateString('ko-KR')}`,
 				html,
 			});
 
