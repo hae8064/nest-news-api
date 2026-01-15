@@ -1,9 +1,19 @@
 import { Controller, Post, Delete, Body, Get } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
+import { GetSubscribersResponse } from './dto/response/getSubscribersResponse';
 
 @Controller('subscription')
 export class SubscriptionController {
 	constructor(private readonly subscriptionService: SubscriptionService) {}
+
+	@Get('subscribers')
+	async getSubscribers(): Promise<GetSubscribersResponse> {
+		const emails = await this.subscriptionService.getActiveSubscribers();
+		return {
+			subscribers: emails,
+			count: emails.length,
+		};
+	}
 
 	@Post('subscribe')
 	async subscribe(@Body('email') email: string) {

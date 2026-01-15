@@ -56,6 +56,6 @@ export class SubscriptionService {
 			where: { isActive: true },
 		});
 
-		return subscriptions.map((s) => s.email);
+		return subscriptions.map((subscription) => subscription.email);
 	}
 }
