@@ -22,13 +22,11 @@ export class SchedulerService {
 		this.logger.log('일일 뉴스 이메일 발송 시작');
 
 		try {
-			// 경제 뉴스 10개 가져오기
-			const economyNews = await this.newsService.fetchNews('경제');
-			const economyNews10 = economyNews.slice(0, 10);
+			// 경제 뉴스 가져오기 (다양한 키워드로 수집, 중복 제거됨)
+			const economyNews = await this.newsService.fetchEconomyNews();
 
-			// 부동산 뉴스 10개 가져오기
-			const estateNews = await this.newsService.fetchNews('부동산');
-			const estateNews10 = estateNews.slice(0, 10);
+			// 부동산 뉴스 가져오기 (다양한 키워드로 수집, 중복 제거됨)
+			const estateNews = await this.newsService.fetchRealEstateNews();
 
 			// 활성 구독자 목록 가져오기
 			const subscribers = await this.subscriptionService.getActiveSubscribers();
@@ -41,8 +39,8 @@ export class SchedulerService {
 			// 구독자들에게 이메일 발송
 			await this.emailService.sendNewsToSubscribers(
 				subscribers,
-				economyNews10,
-				estateNews10,
+				economyNews,
+				estateNews,
 			);
 
 			this.logger.log('일일 뉴스 이메일 발송 완료');

@@ -1,8 +1,14 @@
-import { Controller, Post, Delete, Body, Get } from '@nestjs/common';
+import { Controller, Post, Delete, Body, Get, UseGuards } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { GetSubscribersResponse } from './dto/response/getSubscribersResponse';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+import { UserRole } from 'src/common/enums/userRole.enum';
 
 @Controller('subscription')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class SubscriptionController {
 	constructor(private readonly subscriptionService: SubscriptionService) {}
 

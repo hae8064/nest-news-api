@@ -139,7 +139,7 @@ export class AuthService {
 			expiresIn: '7d',
 		});
 
-		// 5️⃣ refreshToken 회전 (기존 무효화)
+		// refreshToken 전환
 		user.refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
 		await this.userRepository.save(user);
 
