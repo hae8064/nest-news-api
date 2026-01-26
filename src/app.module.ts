@@ -10,6 +10,8 @@ import { EmailModule } from './email/email.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { CrawlerModule } from './crawler/crawler.module';
+import { AuthModule } from './auth/auth.module';
+import { User } from './auth/user.entity';
 
 @Module({
 	imports: [
@@ -26,7 +28,7 @@ import { CrawlerModule } from './crawler/crawler.module';
 				username: configService.get<string>('DB_USERNAME'),
 				password: configService.get<string>('DB_PASSWORD'),
 				database: configService.get<string>('DB_NAME'),
-				entities: [Subscription],
+				entities: [Subscription, User],
 				synchronize: true,
 			}),
 			inject: [ConfigService],
@@ -37,6 +39,7 @@ import { CrawlerModule } from './crawler/crawler.module';
 		SubscriptionModule,
 		SchedulerModule,
 		CrawlerModule,
+		AuthModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],
