@@ -12,6 +12,8 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { CrawlerModule } from './crawler/crawler.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
+import { StockModule } from './stock/stock.module';
+import { StockWatchlist } from './stock/stock.entity';
 
 @Module({
 	imports: [
@@ -28,7 +30,7 @@ import { User } from './auth/user.entity';
 				username: configService.get<string>('DB_USERNAME'),
 				password: configService.get<string>('DB_PASSWORD'),
 				database: configService.get<string>('DB_NAME'),
-				entities: [Subscription, User],
+				entities: [Subscription, User, StockWatchlist],
 				synchronize: true,
 			}),
 			inject: [ConfigService],
@@ -40,6 +42,7 @@ import { User } from './auth/user.entity';
 		SchedulerModule,
 		CrawlerModule,
 		AuthModule,
+		StockModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],
