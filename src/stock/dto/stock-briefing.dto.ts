@@ -3,6 +3,7 @@ import { StockAnalysisDto } from './stock-analysis.dto';
 export class StockBriefingDto {
 	analyses: StockAnalysisDto[];
 	marketSentiment: string;
+	hotStocks: string;
 	generatedAt: string;
 
 	static readonly DISCLAIMER =

@@ -3,6 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { CrawlerService } from '../crawler/crawler.service';
 import { StockNewsItemDto } from './dto/stock-news-item.dto';
+import { StockPriceDto } from './dto/stock-price.dto';
+import {
+	StockMarketDataDto,
+	InvestorTrendItem,
+} from './dto/stock-market-data.dto';
 
 @Injectable()
 export class StockCrawlerService {
@@ -77,6 +82,211 @@ export class StockCrawlerService {
 			this.logger.error(`종목 뉴스 크롤링 실패: ${stockName}`, error);
 			return [];
 		}
+	}
+
+	async fetchStockPrice(code: string): Promise<StockPriceDto | null> {
+		const headers = {
+			'User-Agent':
+				'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+		};
+
+		try {
+			const [basicRes, integrationRes] = await Promise.all([
+				axios.get(
+					`https://m.stock.naver.com/api/stock/${code}/basic`,
+					{ headers, timeout: 10000 },
+				),
+				axios
+					.get(
+						`https://m.stock.naver.com/api/stock/${code}/integration`,
+						{ headers, timeout: 10000 },
+					)
+					.catch(() => null),
+			]);
+
+			const basic = basicRes.data;
+			const totalInfos: Array<{ code: string; value: string }> =
+				integrationRes?.data?.totalInfos ?? [];
+			const volume =
+				totalInfos.find((i) => i.code === 'accumulatedTradingVolume')
+					?.value ?? '';
+
+			return {
+				currentPrice: this.formatPrice(basic.closePrice),
+				change: this.formatPrice(basic.compareToPreviousClosePrice),
+				changePercent: basic.fluctuationsRatio ?? '',
+				volume: this.formatPrice(volume),
+			};
+		} catch (error) {
+			this.logger.warn(`시세 조회 실패: ${code}`, error?.['message']);
+			return null;
+		}
+	}
+
+	async fetchMarketNews(): Promise<StockNewsItemDto[]> {
+		this.logger.log('시장 뉴스 크롤링 시작');
+
+		const queries = [
+			'국내증시 급등 종목 테마',
+			'실적 호전 어닝서프라이즈',
+			'외국인 기관 순매수 종목',
+			'반도체 AI 바이오 수혜주',
+		];
+
+		try {
+			const allResponses = await Promise.all(
+				queries.map((query) =>
+					axios
+						.get<{ items: any[] }>(
+							'https://openapi.naver.com/v1/search/news.json',
+							{
+								headers: {
+									'X-Naver-Client-Id': this.clientId,
+									'X-Naver-Client-Secret': this.clientSecret,
+								},
+								params: { query, display: 5, sort: 'date' },
+							},
+						)
+						.then((res) => res.data.items || [])
+						.catch(() => []),
+				),
+			);
+
+			const items = allResponses.flat();
+			const uniqueItems = this.removeDuplicates(items);
+			const selected = uniqueItems.slice(0, 8);
+
+			const newsItems: StockNewsItemDto[] = await Promise.all(
+				selected.map(async (item) => {
+					let content = '';
+					try {
+						content = await this.crawlerService.fetchArticleContent(
+							item.originallink,
+						);
+					} catch {
+						this.logger.warn(`본문 크롤링 실패: ${item.originallink}`);
+					}
+
+					return {
+						title: item.title.replace(/<[^>]*>/g, ''),
+						link: item.originallink,
+						press: this.extractPress(item.originallink),
+						date: this.formatDate(item.pubDate),
+						content: content
+							? content.substring(0, 2000)
+							: item.description?.replace(/<[^>]*>/g, '') || '',
+					};
+				}),
+			);
+
+			this.logger.log(`시장 뉴스 크롤링 완료: ${newsItems.length}개`);
+			return newsItems;
+		} catch (error) {
+			this.logger.error('시장 뉴스 크롤링 실패', error);
+			return [];
+		}
+	}
+
+	async fetchInvestorTrend(
+		code: string,
+	): Promise<{ items: InvestorTrendItem[]; foreignHoldRatio: string }> {
+		const headers = {
+			'User-Agent':
+				'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+		};
+
+		try {
+			const res = await axios.get(
+				`https://m.stock.naver.com/api/stock/${code}/trend`,
+				{ headers, timeout: 10000, params: { pageSize: 5 } },
+			);
+
+			const rawItems: any[] = res.data ?? [];
+			const items = rawItems.map((item) => ({
+				date: this.formatTrendDate(item.bizdate),
+				foreign: item.foreignerPureBuyQuant ?? '',
+				institution: item.organPureBuyQuant ?? '',
+				individual: item.individualPureBuyQuant ?? '',
+			}));
+			const foreignHoldRatio =
+				rawItems[0]?.foreignerHoldRatio ?? '';
+
+			return { items, foreignHoldRatio };
+		} catch (error) {
+			this.logger.warn(`수급 데이터 조회 실패: ${code}`, error?.['message']);
+			return { items: [], foreignHoldRatio: '' };
+		}
+	}
+
+	async fetchTechnicalIndicators(
+		code: string,
+	): Promise<{ ma5: number; ma20: number; ma60: number; volumeRatio: number } | null> {
+		const headers = {
+			'User-Agent':
+				'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+		};
+
+		try {
+			const end = new Date();
+			const start = new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000);
+			const fmt = (d: Date) =>
+				`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
+			const res = await axios.get(
+				`https://api.stock.naver.com/chart/domestic/item/${code}/day`,
+				{
+					headers,
+					timeout: 10000,
+					params: {
+						startDateTime: fmt(start),
+						endDateTime: fmt(end),
+					},
+				},
+			);
+
+			const candles: Array<{
+				closePrice: number;
+				accumulatedTradingVolume: number;
+			}> = res.data ?? [];
+
+			if (candles.length === 0) return null;
+
+			const closes = candles.map((c) => c.closePrice);
+			const volumes = candles.map((c) => c.accumulatedTradingVolume);
+
+			const ma = (arr: number[], period: number): number => {
+				if (arr.length < period) return 0;
+				const slice = arr.slice(arr.length - period);
+				return Math.round(slice.reduce((a, b) => a + b, 0) / period);
+			};
+
+			const avgVolume20 = ma(volumes, 20);
+			const todayVolume = volumes[volumes.length - 1] ?? 0;
+
+			return {
+				ma5: ma(closes, 5),
+				ma20: ma(closes, 20),
+				ma60: ma(closes, 60),
+				volumeRatio:
+					avgVolume20 > 0
+						? Math.round((todayVolume / avgVolume20) * 100)
+						: 0,
+			};
+		} catch (error) {
+			this.logger.warn(`차트 데이터 조회 실패: ${code}`, error?.['message']);
+			return null;
+		}
+	}
+
+	private formatTrendDate(bizdate: string): string {
+		if (!bizdate || bizdate.length !== 8) return bizdate ?? '';
+		return `${bizdate.slice(4, 6)}/${bizdate.slice(6, 8)}`;
+	}
+
+	private formatPrice(value: string | undefined): string {
+		if (!value) return '';
+		const num = parseInt(value.replace(/,/g, ''), 10);
+		return isNaN(num) ? value : num.toLocaleString('ko-KR');
 	}
 
 	private removeDuplicates(items: any[]): any[] {

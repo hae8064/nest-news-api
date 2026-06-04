@@ -13,6 +13,8 @@ import { CrawlerModule } from './crawler/crawler.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
 import { StockModule } from './stock/stock.module';
+import { StockPortfolio } from './stock/stock-portfolio.entity';
+import { StockPrediction } from './stock/stock-prediction.entity';
 import { StockWatchlist } from './stock/stock.entity';
 
 @Module({
@@ -30,7 +32,7 @@ import { StockWatchlist } from './stock/stock.entity';
 				username: configService.get<string>('DB_USERNAME'),
 				password: configService.get<string>('DB_PASSWORD'),
 				database: configService.get<string>('DB_NAME'),
-				entities: [Subscription, User, StockWatchlist],
+				entities: [Subscription, User, StockWatchlist, StockPortfolio, StockPrediction],
 				synchronize: true,
 			}),
 			inject: [ConfigService],
